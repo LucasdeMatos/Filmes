@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lista de Filmes para Ver</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --card: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #38bdf8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+    }
+
+    .container {
+      width: min(1200px, 92%);
+      margin: 28px auto 40px;
+    }
+
+    .header {
+      background: rgba(17, 24, 39, 0.75);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+
+    .header h1 {
+      margin: 0 0 6px;
+      font-size: 1.8rem;
+    }
+
+    .header p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .movie-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 16px;
+    }
+
+    .movie-card {
+      background: rgba(31, 41, 55, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+    }
+
+    .movie-poster-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      background: #111827;
+      overflow: hidden;
+    }
+
+    .movie-poster {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .movie-content {
+      padding: 12px;
+    }
+
+    .movie-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 6px;
+      flex-wrap: wrap;
+    }
+
+    .movie-title {
+      margin: 0;
+      font-size: 1.02rem;
+      color: #f8fafc;
+    }
+
+    .movie-subtitle {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.87rem;
+    }
+
+    .movie-meta {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .tag {
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.28);
+      color: #bae6fd;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.78rem;
+    }
+
+    .tag-serie {
+      background: rgba(192, 132, 252, 0.18);
+      border: 1px solid rgba(192, 132, 252, 0.45);
+      color: #e9d5ff;
+    }
+
+    .movie-desc {
+      margin: 0;
+      color: #d1d5db;
+      font-size: 0.9rem;
+      line-height: 1.42;
+    }
+
+    .movie-actions {
+      margin-top: 12px;
+    }
+
+    body:not(.is-logged-in) .movie-actions {
+      display: none;
+    }
+
+    .switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .switch .visto-checkbox {
+      appearance: none;
+      width: 44px;
+      height: 24px;
+      border-radius: 999px;
+      background: #6b7280;
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      position: relative;
+      margin: 0;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+
+    .switch .visto-checkbox::before {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #f8fafc;
+      transition: transform 0.2s ease;
+    }
+
+    .switch .visto-checkbox:checked {
+      background: var(--accent);
+      border-color: rgba(56, 189, 248, 0.8);
+    }
+
+    .switch .visto-checkbox:checked::before {
+      transform: translateX(20px);
+    }
+
+    .switch .slider {
+      font-size: 0;
+      line-height: 1;
+      color: var(--muted);
+    }
+
+    .switch .visto-checkbox + .slider::before {
+      content: "Marcar como visto";
+      font-size: 0.88rem;
+      color: var(--muted);
+      transition: color 0.2s ease;
+    }
+
+    .switch .visto-checkbox:checked + .slider::before {
+      content: "Visto!";
+      color: #22c55e;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .badge-visto {
+      display: none;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #22c55e;
+      white-space: nowrap;
+    }
+
+    .movie-card.visto-publico .badge-visto {
+      display: inline-flex;
+    }
+
+    .movie-card.melhor-filme {
+      border-color: rgba(234, 179, 8, 0.8);
+      box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.3), 0 0 18px rgba(234, 179, 8, 0.15);
+    }
+
+    .badge-melhor {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: linear-gradient(135deg, #92400e, #d97706, #fde68a, #d97706, #92400e);
+      color: #1c1004;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+  </style>
+  <style>
+    #login-section {
+      width: min(480px, 100%);
+      margin: 0 auto 22px;
+      background: rgba(17, 24, 39, 0.72);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    #login-toggle {
+      width: 100%;
+      padding: 12px 16px;
+      border: 0;
+      border-bottom: 1px solid transparent;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    #login-toggle:hover {
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    #login-section.expanded #login-toggle {
+      border-bottom-color: rgba(56, 189, 248, 0.2);
+    }
+
+    #login-panel {
+      display: none;
+      padding: 16px;
+    }
+
+    #login-section.expanded #login-panel {
+      display: block;
+    }
+
+    #login-section form {
+      display: grid;
+      gap: 10px;
+    }
+
+    #login-section input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: var(--card);
+      color: var(--text);
+      outline: none;
+      font-size: 0.95rem;
+    }
+
+    #login-section input::placeholder {
+      color: var(--muted);
+    }
+
+    #login-section input:focus {
+      border-color: rgba(56, 189, 248, 0.8);
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    #login-button {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid rgba(56, 189, 248, 0.7);
+      border-radius: 10px;
+      background: var(--accent);
+      color: #082f49;
+      font-weight: 700;
+      cursor: pointer;
+      transition: filter 0.2s ease;
+    }
+
+    #login-button:hover {
+      filter: brightness(1.06);
+    }
+
+    #login-status {
+      margin: 10px 0 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <h1>🎬 Lista para Ver</h1>
+      <p>Filmes e séries da sua lista com ano, gênero, temporadas e pôster.</p>
+    </header>
+
+    <section id="login-section">
+      <button type="button" id="login-toggle" aria-expanded="false">🔐 Clique para fazer login</button>
+      <div id="login-panel">
+        <form>
+          <input type="text" id="login-input" placeholder="Nome de usuário" />
+          <input type="password" id="password-input" />
+          <button type="submit" id="login-button">Entrar</button>
+        </form>
+        <p id="login-status"></p>
+      </div>
+    </section>
+
+    <section id="movie-list" class="movie-grid">
+      <article class="movie-card melhor-filme" data-filme-id="tt28360005">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/yihdXomYb5kTeSivtFndMy5iDmf.jpg" alt="P&ocirc;ster de Devoradores de Estrelas" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/e5e7eb?text=Devoradores+de+Estrelas';" />
+        <div class="movie-content">
+          <span class="badge-melhor">&#11088; Melhor Filme</span>
+          <h2 class="movie-title">Devoradores de Estrelas</h2>
+          <p class="movie-subtitle">Project Hail Mary &mdash; Ryan Gosling</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2026</span>
+            <span class="tag">Fic&ccedil;&atilde;o cient&iacute;fica / Aventura</span>
+          </div>
+          <p class="movie-desc">O astronauta Ryland Grace acorda sozinho em uma espa&ccedil;onave sem mem&oacute;ria de si mesmo. Aos poucos descobre que &eacute; o &uacute;nico sobrevivente de uma miss&atilde;o enviada ao sistema estelar Tau Ceti para salvar a Terra &mdash; e que n&atilde;o est&aacute; completamente sozinho.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt0111161">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/jOqxKIOC92BVyinYO1Fm73XY7Tc.jpg" alt="Pôster de Não Se Preocupe, Querida" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Não Se Preocupe, Querida</h2>
+          <p class="movie-subtitle">Da sua lista: Não se Preocupe querida</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2022</span>
+            <span class="tag">Suspense psicológico / Ficção científica</span>
+          </div>
+          <p class="movie-desc">Uma dona de casa começa a desconfiar que existe algo muito errado por trás da comunidade perfeita onde vive.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt15255288">
+        <img class="movie-poster" src="https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRIDrIeo8zXZcpwPg7W_l3Tqou0XlW-Cle-u7IAjQxyvfah4PbQ" alt="Pôster de A Empregada" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">A Empregada</h2>
+          <p class="movie-subtitle">Da sua lista: a Empregada</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2026</span>
+            <span class="tag">Drama / Suspense</span>
+          </div>
+          <p class="movie-desc">Uma mulher em dificuldades recomeça como empregada doméstica de um casal rico e de elite.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt0410068">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/uQ6ci4iFHhB6TWB2f4wftR7AEly.jpg" alt="Pôster de Meu Nome é Rádio" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Meu Nome é Rádio</h2>
+          <p class="movie-subtitle">Da sua lista: Meu nome é radio</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2003</span>
+            <span class="tag">Drama</span>
+          </div>
+          <p class="movie-desc">Baseado em história real, acompanha a amizade entre um treinador e um jovem com deficiência intelectual em uma cidade marcada por preconceitos.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt0097165">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/l5NbiHKUmahlAT3Q1ig8Tyl9xrc.jpg" alt="Pôster de Sociedade dos Poetas Mortos" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Sociedade dos Poetas Mortos</h2>
+          <p class="movie-subtitle">Da sua lista: sociedade dos poetas mortos</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 1989</span>
+            <span class="tag">Drama</span>
+          </div>
+          <p class="movie-desc">Um professor inspira seus alunos a pensarem por si mesmos e a aproveitarem a vida ao máximo.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt0407304">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/6Biy7R9LfumYshur3YKhpj56MpB.jpg" alt="Pôster de Guerra dos Mundos" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Guerra dos Mundos</h2>
+          <p class="movie-subtitle">Da sua lista: Guerra dos Mundos (Tom Cruise)</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2005</span>
+            <span class="tag">Ficção científica / Ação / Suspense</span>
+          </div>
+          <p class="movie-desc">Um pai tenta proteger seus filhos e sobreviver enquanto a Terra é atacada por uma invasão alienígena devastadora.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt3547740">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/kAQeZUZ1pMTSjSF3d6eBZClFGgN.jpg" alt="Pôster de A Família Bélier" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">A Família Bélier</h2>
+          <p class="movie-subtitle">Da sua lista: Familia Beleir</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2014</span>
+            <span class="tag">Comédia dramática / Musical</span>
+          </div>
+          <p class="movie-desc">A única integrante ouvinte da família descobre seu talento para cantar e precisa escolher entre seus sonhos e sua casa.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt8176054">
+        <img class="movie-poster" src="https://media.themoviedb.org/t/p/w300_and_h450_face/kjVPBXfo7frULyUzQ8NRPAflP8G.jpg" alt="Pôster de Os Meninos que Enganavam Nazistas" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Os Meninos que Enganavam Nazistas</h2>
+          <p class="movie-subtitle">Da sua lista: Os meninos que enganavam os nazistas</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2017</span>
+            <span class="tag">Drama / Guerra</span>
+          </div>
+          <p class="movie-desc">Dois irmãos judeus tentam sobreviver e reencontrar a família durante a ocupação nazista na França.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="tt13122276">
+        <img class="movie-poster" src="https://cdn.ome.lt/OqPH8nERp_59G1MrcDx_dEuMCgY=/253x334/smart/filters:format(webp)/extras/capas/Captura_de_tela_2025-09-09_113331.png" alt="Pôster de Frankenstein" loading="lazy" />
+        <div class="movie-content">
+          <h2 class="movie-title">Frankenstein</h2>
+          <p class="movie-subtitle">Da sua lista: Frankenstein 2025</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2025</span>
+            <span class="tag">Drama gótico / Ficção científica</span>
+          </div>
+          <p class="movie-desc">Filme de Guillermo del Toro baseado no romance de Mary Shelley, sobre um cientista cuja criação de vida gera consequências perigosas.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+
+      <article class="movie-card" data-filme-id="eternidade-001">
+        <img class="movie-poster" src="https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRK9uV_NI5s5jvNCm1g_yxOZlvdkDj3to_pfsrJ871Jh8kn3kZ7" alt="Pôster de Eternidade" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/300x450/1f2937/e5e7eb?text=Eternidade';" />
+        <div class="movie-content">
+          <h2 class="movie-title">Eternidade</h2>
+          <p class="movie-subtitle">Da sua lista: Eternidade</p>
+          <div class="movie-meta">
+            <span class="tag">Ano: 2025</span>
+            <span class="tag">Romance / Comédia</span>
+          </div>
+          <p class="movie-desc">Comédia romântica de 2025 estrelada por Elizabeth Olsen.</p>
+          <div class="movie-actions">
+            <label class="switch">
+              <input type="checkbox" class="visto-checkbox">
+              <span class="slider">Marcar como visto</span>
+            </label>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <p class="footer-note">Dados pesquisados em fontes públicas (Wikipédia, Prime Video e TMDB).</p>
+  </main>
+
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.16.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.3.1/dist/amazon-cognito-identity.min.js"></script>
+  <script>
+    const API_URL = 'https://5fprh1wei3.execute-api.sa-east-1.amazonaws.com/';
+    const COGNITO_USER_POOL_ID = 'sa-east-1_qHwPJUrAq';
+    const COGNITO_CLIENT_ID = '3ipfpr97enrvan1klahjdqq6q';
+    let idToken = null;
+
+    const filmesExemplo = [
+      {
+        filmeId: 'tt28360005',
+        titulo: 'Devoradores de Estrelas',
+        subtitulo: 'Project Hail Mary — Ryan Gosling',
+        ano: 2026,
+        genero: 'Ficção científica / Aventura',
+        descricao: 'O astronauta Ryland Grace acorda sozinho em uma espaçonave sem memória de si mesmo. Aos poucos descobre que é o único sobrevivente de uma missão enviada ao sistema estelar Tau Ceti para salvar a Terra — e que não está completamente sozinho.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/yihdXomYb5kTeSivtFndMy5iDmf.jpg',
+        melhorFilme: true
+      },
+      {
+        filmeId: 'tt0111161',
+        titulo: 'Não Se Preocupe, Querida',
+        subtitulo: 'Da sua lista: Não se Preocupe querida',
+        ano: 2022,
+        genero: 'Suspense psicológico / Ficção científica',
+        descricao: 'Uma dona de casa começa a desconfiar que existe algo muito errado por trás da comunidade perfeita onde vive.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/jOqxKIOC92BVyinYO1Fm73XY7Tc.jpg'
+      },
+      {
+        filmeId: 'tt15255288',
+        titulo: 'A Empregada',
+        subtitulo: 'Da sua lista: a Empregada',
+        ano: 2026,
+        genero: 'Drama / Suspense',
+        descricao: 'Uma mulher em dificuldades recomeça como empregada doméstica de um casal rico e de elite.',
+        poster: 'https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRIDrIeo8zXZcpwPg7W_l3Tqou0XlW-Cle-u7IAjQxyvfah4PbQ'
+      },
+      {
+        filmeId: 'tt0410068',
+        titulo: 'Meu Nome é Rádio',
+        subtitulo: 'Da sua lista: Meu nome é radio',
+        ano: 2003,
+        genero: 'Drama',
+        descricao: 'Baseado em história real, acompanha a amizade entre um treinador e um jovem com deficiência intelectual em uma cidade marcada por preconceitos.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/uQ6ci4iFHhB6TWB2f4wftR7AEly.jpg'
+      },
+      {
+        filmeId: 'tt0097165',
+        titulo: 'Sociedade dos Poetas Mortos',
+        subtitulo: 'Da sua lista: sociedade dos poetas mortos',
+        ano: 1989,
+        genero: 'Drama',
+        descricao: 'Um professor inspira seus alunos a pensarem por si mesmos e a aproveitarem a vida ao máximo.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/l5NbiHKUmahlAT3Q1ig8Tyl9xrc.jpg'
+      },
+      {
+        filmeId: 'tt0407304',
+        titulo: 'Guerra dos Mundos',
+        subtitulo: 'Da sua lista: Guerra dos Mundos (Tom Cruise)',
+        ano: 2005,
+        genero: 'Ficção científica / Ação / Suspense',
+        descricao: 'Um pai tenta proteger seus filhos e sobreviver enquanto a Terra é atacada por uma invasão alienígena devastadora.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/6Biy7R9LfumYshur3YKhpj56MpB.jpg'
+      },
+      {
+        filmeId: 'tt3547740',
+        titulo: 'A Família Bélier',
+        subtitulo: 'Da sua lista: Familia Beleir',
+        ano: 2014,
+        genero: 'Comédia dramática / Musical',
+        descricao: 'A única integrante ouvinte da família descobre seu talento para cantar e precisa escolher entre seus sonhos e sua casa.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/kAQeZUZ1pMTSjSF3d6eBZClFGgN.jpg'
+      },
+      {
+        filmeId: 'tt8176054',
+        titulo: 'Os Meninos que Enganavam Nazistas',
+        subtitulo: 'Da sua lista: Os meninos que enganavam os nazistas',
+        ano: 2017,
+        genero: 'Drama / Guerra',
+        descricao: 'Dois irmãos judeus tentam sobreviver e reencontrar a família durante a ocupação nazista na França.',
+        poster: 'https://media.themoviedb.org/t/p/w300_and_h450_face/kjVPBXfo7frULyUzQ8NRPAflP8G.jpg'
+      },
+      {
+        filmeId: 'tt13122276',
+        titulo: 'Frankenstein',
+        subtitulo: 'Da sua lista: Frankenstein 2025',
+        ano: 2025,
+        genero: 'Drama gótico / Ficção científica',
+        descricao: 'Filme de Guillermo del Toro baseado no romance de Mary Shelley, sobre um cientista cuja criação de vida gera consequências perigosas.',
+        poster: 'https://cdn.ome.lt/OqPH8nERp_59G1MrcDx_dEuMCgY=/253x334/smart/filters:format(webp)/extras/capas/Captura_de_tela_2025-09-09_113331.png'
+      },
+      {
+        filmeId: 'eternidade-001',
+        titulo: 'Eternidade',
+        subtitulo: 'Da sua lista: Eternidade',
+        ano: 2025,
+        genero: 'Romance / Comédia',
+        descricao: 'Comédia romântica de 2025 estrelada por Elizabeth Olsen.',
+        poster: 'https://encrypted-tbn3.gstatic.com/images?q=tbn:ANd9GcRK9uV_NI5s5jvNCm1g_yxOZlvdkDj3to_pfsrJ871Jh8kn3kZ7'
+      },
+      {
+        filmeId: 'tt2543164',
+        titulo: 'A Chegada',
+        subtitulo: 'Da sua lista: A Chegada',
+        ano: 2016,
+        genero: 'Ficção científica / Thriller • 10 anos',
+        descricao: 'Uma linguista é recrutada para decifrar a linguagem de visitantes extraterrestres e evitar um conflito global.',
+        poster: 'https://br.web.img3.acsta.net/c_310_420/pictures/16/10/19/01/57/552532.jpg'
+      },
+      {
+        filmeId: 'justica-artificial-2026',
+        titulo: 'Justiça Artificial',
+        subtitulo: 'Da sua lista: Justiça Artificial',
+        ano: 2026,
+        genero: 'Ficção Científica / Thriller • 14 anos',
+        descricao: 'Em um futuro próximo, um detetive precisa provar sua inocência diante de um sistema de justiça controlado por inteligência artificial.',
+        poster: 'https://ingresso-a.akamaihd.net/prd/img/movie/justica-artificial/f375d54c-d9d3-47af-ae05-5ca9094d233f.webp'
+      },
+      {
+        filmeId: 'tt1907668',
+        titulo: 'O Voo',
+        subtitulo: 'Da sua lista: O Voo',
+        ano: 2012,
+        genero: 'Ação / Thriller • 14 anos',
+        descricao: 'Após um pouso de emergência que salva passageiros, um piloto passa a ser investigado e precisa enfrentar as consequências de suas escolhas.',
+        poster: 'https://m.media-amazon.com/images/S/pv-target-images/ee6cd040529c09b6dadee1b38136cd5c899c0dbdd156ba3f7684bac1b6c03e0d.jpg'
+      },
+      {
+        filmeId: 'tt27444205',
+        titulo: 'Paradise',
+        subtitulo: 'Da sua lista: Paradise',
+        ano: 2025,
+        genero: 'Drama / Ficção científica',
+        descricao: 'Em uma comunidade aparentemente perfeita, um assassinato inicia uma investigação de alto risco.',
+        poster: 'https://br.web.img3.acsta.net/c_310_420/img/a1/71/a171dca2bc2c7c729836d5d51787bfff.jpg',
+        tipoConteudo: 'serie',
+        tipoConteudoTexto: 'É uma série',
+        temporadas: 1
+      }
+    ];
+
+    function atualizarVisibilidadeAcoesFilmes() {
+      document.body.classList.toggle('is-logged-in', idToken !== null);
+    }
+
+    function configurarPainelLogin() {
+      const loginSection = document.getElementById('login-section');
+      const loginToggle = document.getElementById('login-toggle');
+
+      loginToggle.addEventListener('click', () => {
+        if (idToken !== null) {
+          return;
+        }
+
+        loginSection.classList.toggle('expanded');
+        loginToggle.setAttribute('aria-expanded', String(loginSection.classList.contains('expanded')));
+      });
+    }
+
+    function criarCardFilme(filme, visto) {
+      const article = document.createElement('article');
+      article.className = 'movie-card' + (filme.melhorFilme ? ' melhor-filme' : '') + (visto ? ' visto-publico' : '');
+      article.dataset.filmeId = filme.filmeId;
+
+      const posterWrap = document.createElement('div');
+      posterWrap.className = 'movie-poster-wrap';
+
+      const poster = document.createElement('img');
+      poster.className = 'movie-poster';
+      poster.src = filme.poster;
+      poster.alt = `Pôster de ${filme.titulo}`;
+      poster.loading = 'lazy';
+        poster.onerror = () => {
+          poster.onerror = null;
+          poster.src = `https://placehold.co/300x450/1f2937/e5e7eb?text=${encodeURIComponent(filme.titulo)}`;
+        };
+      posterWrap.appendChild(poster);
+
+      const content = document.createElement('div');
+      content.className = 'movie-content';
+
+      if (filme.melhorFilme) {
+        const badge = document.createElement('span');
+        badge.className = 'badge-melhor';
+        badge.textContent = '⭐ Melhor Filme';
+        content.appendChild(badge);
+      }
+
+      const titleRow = document.createElement('div');
+      titleRow.className = 'movie-title-row';
+
+      const title = document.createElement('h2');
+      title.className = 'movie-title';
+      title.textContent = filme.titulo;
+
+      const badgeVisto = document.createElement('span');
+      badgeVisto.className = 'badge-visto';
+      badgeVisto.textContent = '✔ Já visto';
+
+      titleRow.append(title, badgeVisto);
+
+      const subtitle = document.createElement('p');
+      subtitle.className = 'movie-subtitle';
+      subtitle.textContent = filme.subtitulo;
+
+      const meta = document.createElement('div');
+      meta.className = 'movie-meta';
+
+      const yearTag = document.createElement('span');
+      yearTag.className = 'tag';
+      yearTag.textContent = `Ano: ${filme.ano}`;
+
+      const genreTag = document.createElement('span');
+      genreTag.className = 'tag';
+      genreTag.textContent = filme.genero;
+
+      meta.append(yearTag, genreTag);
+
+      if (filme.tipoConteudo === 'serie') {
+        const tipoTag = document.createElement('span');
+        tipoTag.className = 'tag tag-serie';
+        tipoTag.textContent = filme.tipoConteudoTexto || 'É uma série';
+        meta.appendChild(tipoTag);
+
+        if (typeof filme.temporadas === 'number' && filme.temporadas > 0) {
+          const temporadasTag = document.createElement('span');
+          temporadasTag.className = 'tag';
+          temporadasTag.textContent = filme.temporadas === 1
+            ? 'Temporadas: 1'
+            : `Temporadas: ${filme.temporadas}`;
+          meta.appendChild(temporadasTag);
+        }
+      }
+
+      const desc = document.createElement('p');
+      desc.className = 'movie-desc';
+      desc.textContent = filme.descricao;
+
+      const actions = document.createElement('div');
+      actions.className = 'movie-actions';
+
+      const label = document.createElement('label');
+      label.className = 'switch';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.className = 'visto-checkbox';
+      checkbox.checked = Boolean(visto);
+
+      checkbox.addEventListener('change', () => {
+        article.classList.toggle('visto-publico', checkbox.checked);
+      });
+
+      const slider = document.createElement('span');
+      slider.className = 'slider';
+      slider.textContent = 'Marcar como visto';
+
+      label.append(checkbox, slider);
+      actions.appendChild(label);
+      content.append(titleRow, subtitle, meta, desc, actions);
+      article.append(posterWrap, content);
+
+      return article;
+    }
+
+    async function carregarFilmes() {
+      const movieList = document.getElementById('movie-list');
+      movieList.innerHTML = '';
+
+      const statusPorFilme = {};
+
+      try {
+        const resposta = await fetch(API_URL, { method: 'GET' });
+        if (resposta.ok) {
+          const dados = await resposta.json();
+          const filmesDoBanco = Array.isArray(dados.filmes) ? dados.filmes : [];
+
+          filmesDoBanco.forEach((item) => {
+            if (item.filmeId) {
+              statusPorFilme[item.filmeId] = Boolean(item.visto);
+            }
+          });
+        }
+      } catch (erro) {
+        console.error('Erro ao carregar status dos filmes:', erro);
+      }
+
+      await atualizarTemporadasParadiseAoVivo();
+
+      const filmesOrdenados = [
+        ...filmesExemplo.filter((f) => f.melhorFilme),
+        ...filmesExemplo.filter((f) => !f.melhorFilme)
+      ];
+
+      filmesOrdenados.forEach((filme) => {
+        const card = criarCardFilme(filme, statusPorFilme[filme.filmeId]);
+        movieList.appendChild(card);
+      });
+    }
+
+    async function atualizarTemporadasParadiseAoVivo() {
+      const paradise = filmesExemplo.find((item) => item.filmeId === 'tt27444205');
+      if (!paradise) {
+        return;
+      }
+
+      try {
+        const resposta = await fetch('https://api.tvmaze.com/shows/75030/episodes');
+        if (!resposta.ok) {
+          throw new Error('Falha ao consultar temporadas da série Paradise');
+        }
+
+        const episodios = await resposta.json();
+        const temporadasValidas = Array.isArray(episodios)
+          ? episodios
+              .map((episodio) => Number(episodio.season))
+              .filter((temporada) => Number.isInteger(temporada) && temporada > 0)
+          : [];
+
+        if (temporadasValidas.length > 0) {
+          paradise.temporadas = Math.max(...temporadasValidas);
+        }
+      } catch (erro) {
+        console.error('Erro ao atualizar temporadas da série Paradise:', erro);
+      }
+    }
+
+    async function atualizarStatusFilme(filmeId, visto) {
+      if (idToken === null) {
+        alert('Você precisa fazer login para salvar');
+        return;
+      }
+
+      try {
+        const resposta = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': idToken
+          },
+          body: JSON.stringify({ filmeId, visto })
+        });
+
+        if (!resposta.ok) {
+          throw new Error(`Falha ao atualizar filme ${filmeId}`);
+        }
+      } catch (erro) {
+        console.error('Erro ao atualizar status do filme:', erro);
+      }
+    }
+
+    function fazerLogin(email, senha) {
+      const poolData = {
+        UserPoolId: COGNITO_USER_POOL_ID,
+        ClientId: COGNITO_CLIENT_ID
+      };
+
+      const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+      const userData = {
+        Username: email,
+        Pool: userPool
+      };
+
+      const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+      const authenticationData = {
+        Username: email,
+        Password: senha
+      };
+
+      const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+      const loginStatus = document.getElementById('login-status');
+      const loginSection = document.getElementById('login-section');
+
+      cognitoUser.authenticateUser(authenticationDetails, {
+        onSuccess: (result) => {
+          idToken = result.getIdToken().getJwtToken();
+          loginStatus.textContent = 'Login realizado com sucesso!';
+          loginSection.classList.remove('expanded');
+          loginSection.classList.add('logged-in');
+          const loginToggle = document.getElementById('login-toggle');
+          loginToggle.textContent = '✅ Login realizado';
+          loginToggle.setAttribute('aria-expanded', 'false');
+          atualizarVisibilidadeAcoesFilmes();
+        },
+        onFailure: (err) => {
+          loginStatus.textContent = err.message || 'Erro ao realizar login.';
+        },
+        newPasswordRequired: function(userAttributes, requiredAttributes) {
+          // O Cognito já sabe o e-mail do usuário.
+          // Nós precisamos remover esses atributos do objeto que enviamos de volta
+          // para evitar o erro "Cannot modify an already provided email".
+          delete userAttributes.email;
+          delete userAttributes.email_verified;
+
+          const newPassword = prompt('Sua senha é temporária. Por favor, defina uma nova senha:');
+          if (newPassword) {
+            // Agora, enviamos os atributos do usuário SEM os campos de e-mail.
+            cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, this);
+          }
+        },
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      configurarPainelLogin();
+      atualizarVisibilidadeAcoesFilmes();
+      carregarFilmes();
+
+      const loginForm = document.querySelector('#login-section form');
+      loginForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+
+        const emailInput = document.getElementById('login-input');
+        const passwordInput = document.getElementById('password-input');
+
+        fazerLogin(emailInput.value, passwordInput.value);
+      });
+
+      const movieList = document.getElementById('movie-list');
+      movieList.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLInputElement)) {
+          return;
+        }
+
+        if (!target.classList.contains('visto-checkbox')) {
+          return;
+        }
+
+        const card = target.closest('.movie-card');
+        if (!card) {
+          return;
+        }
+
+        const filmeId = card.dataset.filmeId;
+        if (!filmeId) {
+          return;
+        }
+
+        atualizarStatusFilme(filmeId, target.checked);
+      });
+    });
+  </script>
+</body>
+</html>
