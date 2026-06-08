@@ -662,27 +662,6 @@
         descricao: 'Em um futuro próximo, um detetive precisa provar sua inocência diante de um sistema de justiça controlado por inteligência artificial.',
         poster: 'https://ingresso-a.akamaihd.net/prd/img/movie/justica-artificial/f375d54c-d9d3-47af-ae05-5ca9094d233f.webp'
       },
-      {
-        filmeId: 'tt1907668',
-        titulo: 'O Voo',
-        subtitulo: 'Da sua lista: O Voo',
-        ano: 2012,
-        genero: 'Ação / Thriller • 14 anos',
-        descricao: 'Após um pouso de emergência que salva passageiros, um piloto passa a ser investigado e precisa enfrentar as consequências de suas escolhas.',
-        poster: 'https://m.media-amazon.com/images/S/pv-target-images/ee6cd040529c09b6dadee1b38136cd5c899c0dbdd156ba3f7684bac1b6c03e0d.jpg'
-      },
-      {
-        filmeId: 'tt27444205',
-        titulo: 'Paradise',
-        subtitulo: 'Da sua lista: Paradise',
-        ano: 2025,
-        genero: 'Drama / Ficção científica',
-        descricao: 'Em uma comunidade aparentemente perfeita, um assassinato inicia uma investigação de alto risco.',
-        poster: 'https://br.web.img3.acsta.net/c_310_420/img/a1/71/a171dca2bc2c7c729836d5d51787bfff.jpg',
-        tipoConteudo: 'serie',
-        tipoConteudoTexto: 'É uma série',
-        temporadas: 1
-      }
     ];
 
     function atualizarVisibilidadeAcoesFilmes() {
@@ -831,8 +810,6 @@
         console.error('Erro ao carregar status dos filmes:', erro);
       }
 
-      await atualizarTemporadasParadiseAoVivo();
-
       const filmesOrdenados = [
         ...filmesExemplo.filter((f) => f.melhorFilme),
         ...filmesExemplo.filter((f) => !f.melhorFilme)
@@ -842,33 +819,6 @@
         const card = criarCardFilme(filme, statusPorFilme[filme.filmeId]);
         movieList.appendChild(card);
       });
-    }
-
-    async function atualizarTemporadasParadiseAoVivo() {
-      const paradise = filmesExemplo.find((item) => item.filmeId === 'tt27444205');
-      if (!paradise) {
-        return;
-      }
-
-      try {
-        const resposta = await fetch('https://api.tvmaze.com/shows/75030/episodes');
-        if (!resposta.ok) {
-          throw new Error('Falha ao consultar temporadas da série Paradise');
-        }
-
-        const episodios = await resposta.json();
-        const temporadasValidas = Array.isArray(episodios)
-          ? episodios
-              .map((episodio) => Number(episodio.season))
-              .filter((temporada) => Number.isInteger(temporada) && temporada > 0)
-          : [];
-
-        if (temporadasValidas.length > 0) {
-          paradise.temporadas = Math.max(...temporadasValidas);
-        }
-      } catch (erro) {
-        console.error('Erro ao atualizar temporadas da série Paradise:', erro);
-      }
     }
 
     async function atualizarStatusFilme(filmeId, visto) {
